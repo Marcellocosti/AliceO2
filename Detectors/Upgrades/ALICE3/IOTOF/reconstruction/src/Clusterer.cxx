@@ -179,7 +179,7 @@ void Clusterer::ClustererThread::findClustersSingleHit(gsl::span<const Digit> di
     int nMcLabels = 0;
     fetchMCLabels(digitIdx, labelsDigPtr, nMcLabels);
     const auto nStoredCls = static_cast<uint32_t>(mClusters.size());
-    for (int i = nMcLabels; i--;) {
+    for (int i = 0; i < nMcLabels; i++) {
       mLabels.addElement(nStoredCls, mLabelsBuff[i]);
     }
   }
@@ -355,31 +355,31 @@ void Clusterer::ClustererThread::findClustersMultipleHits(gsl::span<const Digit>
 }
 
 //__________________________________________________
-void Clusterer::ClustererThread::fetchMCLabels(uint32_t digID, const ConstDigitTruth* labelsDig, int& nfilled)
+void Clusterer::ClustererThread::fetchMCLabels(uint32_t digID, const ConstDigitTruth* labelsDig, int& nFilled)
 {
-  // LOG(info) << "[Clusterer::ClustererThread::fetchMCLabels] Fetching MC labels for digit ID: " << digID;
-  if (nfilled >= MaxLabels) {
-    // LOG(info) << "[Clusterer::ClustererThread::fetchMCLabels] Maximum number of labels (" << MaxLabels << ") already filled, skipping further labels.";
-    return;
-  }
   if (!labelsDig || digID >= labelsDig->getIndexedSize()) {
     // LOG(info) << "[Clusterer::ClustererThread::fetchMCLabels] No labels found for digit ID: " << digID;
     return;
   }
-  const auto& lbls = labelsDig->getLabels(digID);
-  // LOG(info) << "[Clusterer::ClustererThread::fetchMCLabels] Digit ID: " << digID << " has " << lbls.size() << " labels";
-  for (int i = lbls.size(); i--;) {
-    int ic = nfilled;
-    for (; ic--;) {
-      if (mLabelsBuff[ic] == lbls[i]) {
-        // LOG(info) << "[Clusterer::ClustererThread::fetchMCLabels] Label " << lbls[i] << " already present in buffer, skipping.";
-        return; // already present
+  auto sortBuffer = [this]() { std::sort(this->mLabelsBuff.begin(), this->mLabelsBuff.end(), [](Label const& a, Label const& b) { return a.getTrackID() < b.getTrackID(); }); };
+  for (const auto& label : labelsDig->getLabels(digID)) {
+    bool skip = false;
+    for (int ic = 0; ic < nFilled; ic++) {
+      if (mLabelsBuff[ic] == label) {
+        skip = true;
+        break;
       }
     }
-    mLabelsBuff[nfilled++] = lbls[i];
-    if (nfilled >= MaxLabels) {
-      // LOG(info) << "[Clusterer::ClustererThread::fetchMCLabels] Reached maximum number of labels (" << MaxLabels << "), stopping further label fetching.";
-      break;
+    if (!skip) {
+      if (nFilled < MaxLabels) {
+        mLabelsBuff[nFilled++] = label;
+        if (nFilled == MaxLabels) {
+          sortBuffer();
+        }
+      } else if (mLabelsBuff.back().getTrackID() > label.getTrackID()) {
+        mLabelsBuff.back() = label;
+        sortBuffer();
+      }
     }
   }
 }
