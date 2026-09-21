@@ -174,9 +174,11 @@ inline void Segmentation::localToDetectorUnchecked(float xRow, float zCol, int& 
   iRow = int(xRow / specsConfig.PitchRow);
   iCol = int(zCol / specsConfig.PitchCol);
   // check pixel passive region
+  if (specsConfig.PixelPassiveEdgeX > 1.e-6 && specsConfig.PixelPassiveEdgeZ > 1.e-6) {
   if (std::abs(xRow - (iRow + 0.5) * specsConfig.PitchRow) > (0.5 * specsConfig.PitchRow - specsConfig.PixelPassiveEdgeX) || std::abs(zCol - (iCol + 0.5) * specsConfig.PitchCol) > (0.5 * specsConfig.PitchCol - specsConfig.PixelPassiveEdgeZ)) {
     iRow = iCol = -1;
     return;
+  }
   }
   if (xRow < 0) {
     iRow -= 1;
@@ -204,9 +206,11 @@ inline bool Segmentation::localToDetector(float xRow, float zCol, int& iRow, int
   iRow = int(xRow / specsConfig.PitchRow);
   iCol = int(zCol / specsConfig.PitchCol);
   // check pixel passive region
+  if (specsConfig.PixelPassiveEdgeX > 1.e-6 && specsConfig.PixelPassiveEdgeZ > 1.e-6) {
   if (std::abs(xRow - (iRow + 0.5) * specsConfig.PitchRow) > (0.5 * specsConfig.PitchRow - specsConfig.PixelPassiveEdgeX) || std::abs(zCol - (iCol + 0.5) * specsConfig.PitchCol) > (0.5 * specsConfig.PitchCol - specsConfig.PixelPassiveEdgeZ)) {
     iRow = iCol = -1;
     return false;
+  }
   }
   return true;
 }
